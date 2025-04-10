@@ -23,3 +23,18 @@ type SensorService interface {
 type AlertService interface {
 	CheckAndCreateAlerts(data *domain.SensorData) []domain.Alert
 }
+
+// EventPublisher define la interfaz para componentes que publican eventos
+type EventPublisher interface {
+	PublishSensorDataCreated(ctx context.Context, data *domain.SensorData) error
+	PublishSensorAlert(ctx context.Context, alert *domain.Alert) error
+	PublishUserRegistered(ctx context.Context, userID uint, username, email string) error
+	PublishUserAuthenticated(ctx context.Context, userID uint, username, email string) error
+}
+
+// EventSubscriber define la interfaz para componentes que se suscriben a eventos
+type EventSubscriber interface {
+	SubscribeToSensorData(handler func(data *domain.SensorData) error) error
+	SubscribeToSensorAlerts(handler func(alert *domain.Alert) error) error
+	SubscribeToUserEvents(handler func(eventType string, userID uint, username, email string) error) error
+}

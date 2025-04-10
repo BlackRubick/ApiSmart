@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	ServerPort string
-	DBConfig   database.DBConfig
-	JWTSecret  string
-	CORSConfig CORSConfig
+	ServerPort     string
+	DBConfig       database.DBConfig
+	JWTSecret      string
+	CORSConfig     CORSConfig
+	RabbitMQConfig RabbitMQConfig
 }
 
 // CORSConfig contiene la configuración para CORS
@@ -38,6 +39,11 @@ func LoadConfig() *Config {
 			AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Requested-With"},
 			AllowCredentials: true,  // Permite enviar cookies en solicitudes cross-origin
 			MaxAge:           86400, // Tiempo en segundos para cachear preflight requests (24 horas)
+		},
+		RabbitMQConfig: RabbitMQConfig{
+			URL:          getEnv("RABBITMQ_URL", "amqp://manuel:manuel@33.14.65.86:5672/"),
+			ExchangeName: getEnv("RABBITMQ_EXCHANGE", "smart_api_exchange"),
+			QueueName:    getEnv("RABBITMQ_QUEUE", "smart_api_queue"),
 		},
 	}
 }

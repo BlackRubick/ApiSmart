@@ -48,31 +48,3 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-
-// Elimina esta función y la registración del middleware
-//func (h *AuthHandler) AuthMiddleware() gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//		authHeader := c.GetHeader("Authorization")
-//		if authHeader == "" {
-//			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token de autenticación no proporcionado"})
-//			return
-//		}
-//
-//		// Extraer el token del encabezado
-//		parts := strings.Split(authHeader, " ")
-//		if len(parts) != 2 || parts[0] != "Bearer" {
-//			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "formato de token inválido"})
-//			return
-//		}
-//
-//		token := parts[1]
-//		userID, err := h.authService.ValidateToken(token)
-//		if err != nil {
-//			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token inválido o expirado"})
-//			return
-//		}
-//
-//		c.Set("userID", userID)
-//		c.Next()
-//	}
-//}

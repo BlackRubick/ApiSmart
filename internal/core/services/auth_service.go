@@ -3,25 +3,32 @@ package services
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"ApiSmart/internal/core/domain"
 	"ApiSmart/internal/core/ports"
 	"ApiSmart/pkg/auth"
+	"ApiSmart/pkg/event"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type authService struct {
-	userRepo ports.UserRepository
+// EventDrivenAuthService implementa AuthService con arquitectura basada en eventos
+type EventDrivenAuthService struct {
+	userRepo        ports.UserRepository
+	eventDispatcher *event.EventDispatcher
 }
 
-func NewAuthService(userRepo ports.UserRepository) ports.AuthService {
-	return &authService{
-		userRepo: userRepo,
+// NewEventDrivenAuthService crea un nuevo servicio de autenticación basado en eventos
+func NewEventDrivenAuthService(userRepo ports.UserRepository, eventDispatcher *event.EventDispatcher) ports.AuthService {
+	return &EventDrivenAuthService{
+		userRepo:        userRepo,
+		eventDispatcher: eventDispatcher,
 	}
 }
 
-func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error) {
+// Register registra un nuevo usuario y publica un evento
+func (s *EventDrivenAuthService) Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error) {
 	// Comprobar si el usuario ya existe
 	existingUser, _ := s.userRepo.FindByEmail(ctx, req.Email)
 	if existingUser != nil {
@@ -55,6 +62,23 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		return nil, err
 	}
 
+	// Publicar evento de registro de usuario
+	eventData := map[string]interface{}{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}
+
+	if err := s.eventDispatcher.Dispatch(
+		ctx,
+		event.EventTypeUserRegistered,
+		event.TopicUserEvents,
+		eventData,
+	); err != nil {
+		// Solo logear el error, no fallar el flujo principal
+		log.Printf("Error publishing user registered event: %v", err)
+	}
+
 	return &domain.AuthResponse{
 		Token:    token,
 		Username: user.Username,
@@ -62,7 +86,8 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 	}, nil
 }
 
-func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
+// Login autentica a un usuario y publica un evento
+func (s *EventDrivenAuthService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
 	// Buscar usuario por email
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
@@ -81,6 +106,23 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, err
 	}
 
+	// Publicar evento de autenticación de usuario
+	eventData := map[string]interface{}{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}
+
+	if err := s.eventDispatcher.Dispatch(
+		ctx,
+		event.EventTypeUserAuthenticated,
+		event.TopicUserEvents,
+		eventData,
+	); err != nil {
+		// Solo logear el error, no fallar el flujo principal
+		log.Printf("Error publishing user authenticated event: %v", err)
+	}
+
 	return &domain.AuthResponse{
 		Token:    token,
 		Username: user.Username,
@@ -88,6 +130,7 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 	}, nil
 }
 
-func (s *authService) ValidateToken(token string) (uint, error) {
+// ValidateToken valida un token JWT
+func (s *EventDrivenAuthService) ValidateToken(token string) (uint, error) {
 	return auth.ValidateJWT(token)
 }
